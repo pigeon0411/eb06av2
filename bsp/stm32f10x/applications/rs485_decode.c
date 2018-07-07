@@ -5,6 +5,11 @@
 #include <string.h>
 
 
+
+struct rt_mutex *rs485_send_mux = RT_NULL;
+
+
+
 uchar Isr_i=0;
 uchar Isr_com1=0;
 uchar Isr_j=0;
@@ -348,13 +353,25 @@ void rs485_data_init(void)
 
 rt_err_t rs485_send_data(u8* data,u16 len)
 {
-	if(uart1_dev_my->device == RT_NULL)	
+	rt_err_t  result;
+
+
+	result = rt_mutex_take(rs485_send_mux, RT_WAITING_FOREVER);
+	if (result == RT_EOK)
 	{
-		uart1_rs485_set_device();
+
+		if(uart1_dev_my->device == RT_NULL)	
+		{
+			uart1_rs485_set_device();
+		}
+		
+		rt_device_write(uart1_dev_my->device, 0, data, len);
 	}
-	
-	rt_device_write(uart1_dev_my->device, 0, data, len);
-	
+
+
+	rt_mutex_release(rs485_send_mux);
+	rt_mutex_release(rs485_send_mux);
+			
 	return RT_EOK;
 }
 
@@ -362,6 +379,10 @@ int rs485_system_init(void)
 {
     rt_err_t result;
     rt_thread_t init_thread;
+
+
+
+	rs485_send_mux = rt_mutex_create("rs85mux",RT_IPC_FLAG_FIFO);
 	
 	rs485_data_init();	
 

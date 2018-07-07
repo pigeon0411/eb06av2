@@ -170,15 +170,23 @@ static u32 pb12_13_14_15_mode_check(void)
 
 			if(((key_tmp>>i)&0x0001)==0)
 			{
-				 
-				key_pre_2 = i+1;
-				return (i+1);
+				if(key_pre_2 == i+1)
+				{
+					return (key_pre_2|0x9000); // long press
+				}
+				else
+				{
+					key_pre_2 = i+1;
+					return (i+1);
+				}
  			}
 		}
 	}
 
 	{
-		if((key_pre_2 && key_pre_2!=(i+1))||(key_pre_2 && i==20))
+		//if((key_pre_2 && key_pre_2!=(i+1))||(key_pre_2 && i==20))
+		
+		if(key_pre_2) // release
 		{
  
 			i = key_pre_2|0x8000;
@@ -225,10 +233,13 @@ static u32 pb12_13_14_15_mode_handle(void)
 		}
 
 	}
-	else if(key_tmp>=0x8000)
+	else if((key_tmp>=0x8000)&& (key_tmp<0x9000))
 	{
-		pelcod_zf_packet_send(ZF_STOP,8);
 		rt_thread_delay(30);
+		pelcod_zf_packet_send(ZF_STOP,8);
+		rt_thread_delay(20);
+		
+		pelcod_zf_packet_send(ZF_STOP,8);
 	}
 }
 
