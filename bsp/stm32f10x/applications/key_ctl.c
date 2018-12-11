@@ -97,6 +97,47 @@ u16 key_pre = 0;
 
 u8 mode_disp_state = 0;
 
+#if 1 //press release
+static u8 pb11_mode_check(void)
+{
+	static u8 key_state_tmp = 0;
+	
+	if(GPIO_ReadInputDataBit(KEY_PORT2,GPIO_Pin_11) == 0)
+	{
+		rt_thread_delay(RT_TICK_PER_SECOND/50);
+		if(GPIO_ReadInputDataBit(KEY_PORT2,GPIO_Pin_11) == 0)
+		{
+
+			if(key_state_tmp == 0)
+			{
+
+				key_state_tmp = 1;
+				return 1;
+
+			}
+		}
+
+	}
+	else
+	{
+		if(key_state_tmp)
+		{
+			key_state_tmp = 0;
+			mode_disp_state++;
+			if(mode_disp_state>3)
+				mode_disp_state = 0;
+			
+			
+			pelcod_call_pre_packet_send(mode_disp_state+201);
+
+
+		}
+	}
+
+	return 0;
+}
+
+#else
 static u8 pb11_mode_check(void)
 {
 	static u8 key_state_tmp = 0;
@@ -132,6 +173,7 @@ static u8 pb11_mode_check(void)
 	return 0;
 }
 
+#endif
 
 u8 long_key_state = 0;
 
@@ -212,19 +254,19 @@ static u32 pb12_13_14_15_mode_handle(void)
 		{
 
 		case KEY_PB12:
-			pelcod_zf_packet_send(ZF_TELE,8);
+			pelcod_zf_packet_send(ZF_TELE,0);
 
 			break;
 		case KEY_PB13:
-			pelcod_zf_packet_send(ZF_WIDE,8);
+			pelcod_zf_packet_send(ZF_WIDE,0);
 
 			break;	
 		case KEY_PB14:
-			pelcod_zf_packet_send(ZF_FAR,8);
+			pelcod_zf_packet_send(ZF_FAR,0);
 		
 			break;
 		case KEY_PB15:
-			pelcod_zf_packet_send(ZF_NEAR,8);
+			pelcod_zf_packet_send(ZF_NEAR,0);
 			
 				break;
 
@@ -236,10 +278,7 @@ static u32 pb12_13_14_15_mode_handle(void)
 	else if((key_tmp>=0x8000)&& (key_tmp<0x9000))
 	{
 		rt_thread_delay(30);
-		pelcod_zf_packet_send(ZF_STOP,8);
-		rt_thread_delay(20);
-		
-		pelcod_zf_packet_send(ZF_STOP,8);
+		pelcod_zf_packet_send(ZF_STOP,0);
 	}
 }
 
@@ -416,13 +455,13 @@ void pelcod_zf_packet_send(u8 cmd,u8 zfspeed)
 		cmd_buff_private[2] = 0;
 		cmd_buff_private[4] = zfspeed;
 		break;
-	case 3:
+	case 4:
 		cmd_buff_private[3] = 0x00;
 		cmd_buff_private[2] = 0x01;//
 		
 		cmd_buff_private[4] = zfspeed;
 		break;
-	case 4:
+	case 3:
 		cmd_buff_private[3] = 0x80;
 		cmd_buff_private[2] = 0;
 		
@@ -762,17 +801,8 @@ void rt_key_thread_entry(void* parameter)
 		if(k)
 		{
 			key_handle(k);
-rt_thread_delay(100);
+			rt_thread_delay(100);
 		}
-
-
-
-
-
-
-
-
-
 
 
 		pb11_mode_check();
