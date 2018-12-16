@@ -8,6 +8,10 @@
 #include "includes.h"
 #include "key_ctl.h"
 
+#define	EB06VA2_8M			1
+#define	EB06VA2				0
+
+#define	EB06_VERSION		EB06VA2
 
 
 void iris_auto_manual_set(u8 mode);
@@ -283,6 +287,177 @@ static u32 pb12_13_14_15_mode_handle(void)
 }
 
 
+//返回0为无按键，返回非0值，则为对应的按键号PA1-6, 若为0x8000则为释放按键
+static u16 key_PA1_PA6_ctl_check(void)
+{
+	u16 data,data2;
+	u16 i;
+	
+	static u16 key_bak=0;
+	
+	data = GPIO_ReadInputData(KEY_PORT1);
+	data = (data>>1)&0x003f;
+	
+	
+	for(i=0;i<6;i++)
+	{
+		if(((data>>i)&0x0001)==0)
+		{
+			rt_thread_delay(30);
+			data = GPIO_ReadInputData(KEY_PORT1);
+			data = (data>>1)&0x003f;
+
+			if(((data>>i)&0x0001)==0)
+			{
+				if(key_bak == (i+1))
+					return 0;
+				
+				key_bak = i+1;
+				return (i+1);
+				
+			}
+		}
+	}
+
+	if(key_bak)
+	{
+		i = key_bak|0x8000;
+		key_bak = 0;
+		return i;
+
+	}
+	return 0;
+}
+
+//返回0为无按键，返回非0值，则为对应的按键号PB12-15, 若为0x8000则为释放按键
+static u16 key_PB12_PB15_ctl_check(void)
+{
+	u16 data,data2;
+	u16 i;
+	
+	static u16 key_bak=0;
+	
+	data = GPIO_ReadInputData(KEY_PORT2);
+	data = (data>>12)&0x000f;
+	
+	
+	for(i=0;i<4;i++)
+	{
+		if(((data>>i)&0x0001)==0)
+		{
+			rt_thread_delay(30);
+			data = GPIO_ReadInputData(KEY_PORT2);
+			data = (data>>1)&0x000f;
+
+			if(((data>>i)&0x0001)==0)
+			{
+				if(key_bak == (i+1))
+					return 0;
+				
+				key_bak = i+1;
+				return (i+1);
+				
+			}
+		}
+	}
+
+	if(key_bak)
+	{
+		i = key_bak|0x8000;
+		key_bak = 0;
+		return i;
+
+	}
+	return 0;
+}
+
+
+
+
+//返回0为无按键，返回非0值，则为对应的按键号PA7-8, 若为0x800x则为释放按键
+//检测同时按下的情况,此时，则返回0x000f,释放则返回0x800f
+static u16 key_PA7_PA8_ctl_check(void)
+{
+	u8 data,data2;
+	u16 i;
+	
+	static u16 key_bak=0;
+	
+	data = GPIO_ReadInputDataBit(KEY_PORT1,GPIO_Pin_7);
+	data2 = GPIO_ReadInputDataBit(KEY_PORT1,GPIO_Pin_8);
+	
+	if(data == 0)
+	{
+		rt_thread_delay(30);
+		data = GPIO_ReadInputDataBit(KEY_PORT1,GPIO_Pin_7);
+
+		if(data == 0)
+		{
+			data2 = GPIO_ReadInputDataBit(KEY_PORT1,GPIO_Pin_8);
+			if(data2 == 0)
+			{
+				rt_thread_delay(30);
+				data2 = GPIO_ReadInputDataBit(KEY_PORT1,GPIO_Pin_8);
+				{
+
+					if(key_bak == 0x000f)
+						return 0;
+					
+					key_bak = 0x000f;					
+					return key_bak;
+				}
+			}
+			
+			if(key_bak == (1))
+				return 0;
+			
+			key_bak = 1;
+			return (1);
+			
+		}
+	}
+	else if(data2 == 0)
+	{
+		rt_thread_delay(30);
+		data2 = GPIO_ReadInputDataBit(KEY_PORT1,GPIO_Pin_8);
+
+		if(data2 == 0)
+		{
+			data = GPIO_ReadInputDataBit(KEY_PORT1,GPIO_Pin_7);
+			if(data == 0)
+			{
+				rt_thread_delay(30);
+				data = GPIO_ReadInputDataBit(KEY_PORT1,GPIO_Pin_7);
+				{
+
+					if(key_bak == 0x000f)
+						return 0;
+					
+					key_bak = 0x000f;					
+					return key_bak;
+				}
+			}
+			
+			if(key_bak == (2))
+				return 0;
+			
+			key_bak = 2;
+			return (2);
+
+		}
+	}
+	
+	if(key_bak)
+	{
+		i = key_bak|0x8000;
+		key_bak = 0;
+		return i;
+
+	}
+	return 0;
+}
+
+
 
 
 //返回0为无按键，返回非0值，则为对应的按键号
@@ -441,7 +616,14 @@ void pelcod_zf_packet_send(u8 cmd,u8 zfspeed)
 	u8 cmd_buff_private[7];
 	cmd_buff_private[0] = 0xff;
 	cmd_buff_private[1] = 0xff;
+
 	
+	cmd_buff_private[2] = 0x00;
+	cmd_buff_private[3] = 0x00;
+	cmd_buff_private[4] = 0x00;
+	cmd_buff_private[5] = 0x00;
+
+
 	switch(cmd)
 	{
 	case 1:
@@ -783,36 +965,263 @@ void key_handle(u16 val)
 	}
 }
 
+
+void key_pa1_6_handle(u16 val)
+{
+	if(val == 0)
+		return;
+
+	{
+		
+		if(val == 0x8708)
+			return;
+
+		if(val >= 0x8000)
+			val = val&0x7fff;
+		else
+		{
+				return;
+
+		}
+		
+		if(val<9)
+		{
+			if(val < 7)// 在此处不处理按键7 8
+				led_onoff_set(val);
+
+		}
+
+	}
+}
+
+
+#if EB06_VERSION== EB06VA2_8M //EB06VA2-8M
+void key_pa7_8_handle(u16 val)
+{
+	if(val == 0)
+		return;
+
+	{
+		
+		if(val == 0x8708)
+			return;
+
+		if(val >= 0x8000)
+			val = val&0x7fff;
+		else
+		{
+				return;
+
+		}
+		
+		if(val<3)
+		{
+
+				for(i=0;i<8;i++)//
+				{
+					GPIO_WriteBit(GPIOB, led_pin[i], Bit_RESET);
+
+				}
+				GPIO_WriteBit(GPIOB, led_pin[val-1], Bit_SET);
+
+				pelcod_call_pre_packet_send(val+206);
+		}
+
+	}
+}
+#else //EB06VA2
+void key_pa7_8_handle(u16 val)
+{
+	if(val == 0)
+		return;
+
+	{
+		
+		if(val == 0x8708)
+			return;
+
+		if(val >= 0x8000)
+			val = val&0x7fff;
+		else
+		{
+				return;
+
+		}
+
+		if(val == 0x000f)
+		{
+			if((GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_6)==1) && (GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_7)==0))
+			{
+				GPIO_WriteBit(GPIOB,GPIO_Pin_7, Bit_SET);
+				GPIO_WriteBit(GPIOB, GPIO_Pin_6, Bit_RESET);
+				pelcod_call_pre_packet_send(128);
+			}
+			else if((GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_6)==0) && (GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_7)==1))
+			{
+				
+				GPIO_WriteBit(GPIOB,GPIO_Pin_6, Bit_SET);
+				GPIO_WriteBit(GPIOB, GPIO_Pin_7, Bit_RESET);
+				
+				pelcod_set_pre_packet_send(128);
+			}
+		}
+		else if(val<9)
+		{
+			if(val == 2)// 按下PA8
+			{	
+				pelcod_open_close_packet_send(0);//open
+				rt_thread_delay(150);
+				pelcod_zf_packet_send(0,0);
+			
+			}
+			else// 按下PA7
+			{
+				pelcod_open_close_packet_send(1);//close
+				rt_thread_delay(150);
+				pelcod_zf_packet_send(0,0);
+
+			}
+				
+		}
+
+	}
+}
+
+#endif
+
+void key_pb12_15_handle(u16 val)
+{
+	if(val == 0)
+		return;
+
+	{
+		
+		if(val == 0x8708)
+			return;
+
+		if(val >= 0x8000)
+			val = val&0x7fff;
+		else
+		{
+				return;
+
+		}
+
+		if(val<9)
+		{
+			switch(val) //按键PB12-PB15
+				{
+			case 1://zoom- wide
+				pelcod_zf_packet_send(2,0);//open
+				rt_thread_delay(150);
+				pelcod_zf_packet_send(0,0);
+
+				break;
+			case 2://zoom+ tele
+				pelcod_zf_packet_send(1,0);//open
+				rt_thread_delay(150);
+				pelcod_zf_packet_send(0,0);
+
+				break;
+
+			case 3://focus- far
+				pelcod_zf_packet_send(3,0);//open
+				rt_thread_delay(150);
+				pelcod_zf_packet_send(0,0);
+
+				break;
+			case 4://focus+ near
+
+				pelcod_zf_packet_send(4,0);//open
+				rt_thread_delay(150);
+				pelcod_zf_packet_send(0,0);
+
+				break;
+
+			default:
+				break;
+
+			}
+			
+		}
+
+	}
+}
+
+
+
 void rt_key_thread_entry(void* parameter)
 {
 
 	u16 k;
 
-	key_pin_init();
-	led_pin_init();
 	
 
     while(1)
 	{
 		
-		pb12_13_14_15_mode_handle();
+		//pb12_13_14_15_mode_handle();
 
-		k = key_ctl_check();
+		rt_thread_delay(40);
+    }
+}
+
+
+void rt_key_pa1_6_thread_entry(void* parameter)
+{
+
+	u16 k;
+
+    while(1)
+	{
+		k = key_PA1_PA6_ctl_check();
 		if(k)
 		{
-			key_handle(k);
+			key_pa1_6_handle(k);
 			rt_thread_delay(100);
-		}
-
-
-		pb11_mode_check();
-		
+		}	
 		
 		rt_thread_delay(4);
     }
 }
 
 
+
+void rt_key_pa7_8_thread_entry(void* parameter)
+{
+
+	u16 k;
+
+    while(1)
+	{
+		k = key_PA7_PA8_ctl_check();
+		if(k)
+		{
+			key_pa7_8_handle(k);
+			rt_thread_delay(50);
+		}	
+		
+		rt_thread_delay(40);
+    }
+}
+
+
+void rt_key_pb12_15_thread_entry(void* parameter)
+{
+	u16 k;
+
+    while(1)
+	{
+		k = key_PB12_PB15_ctl_check();
+		if(k)
+		{
+			key_pb12_15_handle(k);
+			rt_thread_delay(50);
+		}	
+		
+		rt_thread_delay(40);
+    }
+}
 
 
 int rt_key_ctl_init(void)
@@ -821,11 +1230,40 @@ int rt_key_ctl_init(void)
 	
     rt_thread_t init_thread;
 
+
+	key_pin_init();
+	led_pin_init();
+
+	
+
+
     init_thread = rt_thread_create("key",
                                    rt_key_thread_entry, RT_NULL,
-                                   4096, 10, 5);
+                                   1024, 10, 5);
     if (init_thread != RT_NULL)
         rt_thread_startup(init_thread);
+
+
+    init_thread = rt_thread_create("key0",
+                                   rt_key_pa1_6_thread_entry, RT_NULL,
+                                   1024, 10, 5);
+    if (init_thread != RT_NULL)
+        rt_thread_startup(init_thread);
+
+
+	    init_thread = rt_thread_create("key2",
+                                   rt_key_pa7_8_thread_entry, RT_NULL,
+                                   1024, 10, 5);
+    if (init_thread != RT_NULL)
+        rt_thread_startup(init_thread);
+
+	    init_thread = rt_thread_create("key3",
+                                   rt_key_pb12_15_thread_entry, RT_NULL,
+                                   1024, 10, 5);
+    if (init_thread != RT_NULL)
+        rt_thread_startup(init_thread);
+
+	
 
     return 0;
 }
