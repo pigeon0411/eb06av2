@@ -1030,6 +1030,54 @@ void key_pa7_8_handle(u16 val)
 	}
 }
 #else //EB06VA2
+#if 1
+void key_pa7_8_handle(u16 val)
+{
+	if(val == 0)
+		return;
+		
+		if(val == 0x800f)
+		{
+			if((GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_6)==1) && (GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_7)==0))
+			{
+				GPIO_WriteBit(GPIOB,GPIO_Pin_7, Bit_SET);
+				GPIO_WriteBit(GPIOB, GPIO_Pin_6, Bit_RESET);
+				pelcod_call_pre_packet_send(128);
+			}
+			else if((GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_6)==0) && (GPIO_ReadOutputDataBit(GPIOB,GPIO_Pin_7)==1))
+			{
+				
+				GPIO_WriteBit(GPIOB,GPIO_Pin_6, Bit_SET);
+				GPIO_WriteBit(GPIOB, GPIO_Pin_7, Bit_RESET);
+				
+				pelcod_set_pre_packet_send(128);
+			}
+
+		}
+		else if(val > 0x8000)
+		{
+			pelcod_zf_packet_send(0,0);
+				return;
+
+		}
+
+		if(val<9)
+		{
+			if(val == 2)// 按下PA8
+			{	
+				pelcod_open_close_packet_send(0);//open
+			
+			}
+			else// 按下PA7
+			{
+				pelcod_open_close_packet_send(1);//close
+
+			}
+				
+		}
+}
+
+#else
 void key_pa7_8_handle(u16 val)
 {
 	if(val == 0)
@@ -1086,9 +1134,61 @@ void key_pa7_8_handle(u16 val)
 
 	}
 }
-
+#endif
 #endif
 
+
+#if 1
+void key_pb12_15_handle(u16 val)
+{
+	if(val == 0)
+		return;
+
+		
+		if(val == 0x8708)
+			return;
+
+		if(val >= 0x8000)
+		{
+			pelcod_zf_packet_send(0,0);
+				return;
+
+		}
+
+		if(val<9)
+		{
+			switch(val) //按键PB12-PB15
+				{
+			case 1://zoom- wide
+				pelcod_zf_packet_send(2,0);//open
+
+
+				break;
+			case 2://zoom+ tele
+				pelcod_zf_packet_send(1,0);//open
+
+				break;
+
+			case 3://focus- far
+				pelcod_zf_packet_send(3,0);//open
+
+				break;
+			case 4://focus+ near
+
+				pelcod_zf_packet_send(4,0);//open
+
+				break;
+
+			default:
+				break;
+
+			}
+			
+		}
+
+}
+
+#else
 void key_pb12_15_handle(u16 val)
 {
 	if(val == 0)
@@ -1147,7 +1247,7 @@ void key_pb12_15_handle(u16 val)
 
 	}
 }
-
+#endif
 
 
 void rt_key_thread_entry(void* parameter)
