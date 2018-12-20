@@ -347,7 +347,7 @@ static u16 key_PB12_PB15_ctl_check(void)
 		{
 			rt_thread_delay(30);
 			data = GPIO_ReadInputData(KEY_PORT2);
-			data = (data>>1)&0x000f;
+			data = (data>>12)&0x000f;
 
 			if(((data>>i)&0x0001)==0)
 			{
