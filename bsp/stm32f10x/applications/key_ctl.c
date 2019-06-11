@@ -11,7 +11,7 @@
 #define	EB06VA2_8M			1
 #define	EB06VA2				0
 
-#define	EB06_VERSION		EB06VA2
+#define	EB06_VERSION		EB06VA2_8M//EB06VA2
 
 
 void iris_auto_manual_set(u8 mode);
@@ -998,6 +998,8 @@ void key_pa1_6_handle(u16 val)
 #if EB06_VERSION== EB06VA2_8M //EB06VA2-8M
 void key_pa7_8_handle(u16 val)
 {
+	u8 i;
+	
 	if(val == 0)
 		return;
 
