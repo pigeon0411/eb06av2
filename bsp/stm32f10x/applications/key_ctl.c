@@ -374,7 +374,7 @@ static u16 key_PB12_PB15_ctl_check(void)
 
 
 
-//返回0为无按键，返回非0值，则为对应的按键号PA7-8, 若为0x800x则为释放按键
+//返回0为无按键，返回非0值(1,2)，则为对应的按键号PA7-8, 若为0x800x则为释放按键
 //检测同时按下的情况,此时，则返回0x000f,释放则返回0x800f
 static u16 key_PA7_PA8_ctl_check(void)
 {
@@ -1024,7 +1024,7 @@ void key_pa7_8_handle(u16 val)
 					GPIO_WriteBit(GPIOB, led_pin[i], Bit_RESET);
 
 				}
-				GPIO_WriteBit(GPIOB, led_pin[val-1], Bit_SET);
+				GPIO_WriteBit(GPIOB, led_pin[val+5], Bit_SET);
 
 				pelcod_call_pre_packet_send(val+206);
 		}
