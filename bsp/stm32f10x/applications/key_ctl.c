@@ -58,8 +58,12 @@ void led_pin_init(void)
 	GPIO_ResetBits(GPIOC,GPIO_Pin_11);		
  
 	#endif
-	
+
+#if EB06_VERSION == EB06VA2_8M
+
+#else
 	 iris_auto_manual_set(0);// auto iris mode
+#endif
 
 }
 
