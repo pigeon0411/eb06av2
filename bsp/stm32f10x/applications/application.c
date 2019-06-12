@@ -253,7 +253,7 @@ void rt_main_thread_entry(void* parameter)
 {
 
 	rs485_system_init();
-
+	rt_thread_delay(500);
 	rt_key_ctl_init();
 	rt_adc_ctl_init();
 

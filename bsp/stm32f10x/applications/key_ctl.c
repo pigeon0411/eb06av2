@@ -835,7 +835,35 @@ void iris_auto_manual_set(u8 mode)
 }
 
 
+#if EB06_VERSION == EB06VA2_8M
 
+void led_onoff_set(u16 val)
+{
+	u8 i;
+
+	if(val > 7)
+		return;
+#if 0
+GPIO_WriteBit(GPIOC, GPIO_Pin_10, Bit_RESET);
+GPIO_WriteBit(GPIOC, GPIO_Pin_11, Bit_RESET);
+
+#endif
+	for(i=0;i<8;i++)//不处理 7号和8号灯
+	{
+		GPIO_WriteBit(GPIOB, led_pin[i], Bit_RESET);
+
+	}
+	GPIO_WriteBit(GPIOB, led_pin[val-1], Bit_SET);
+
+#if 0
+	if(val == 4)
+		GPIO_WriteBit(GPIOC, GPIO_Pin_10, Bit_RESET);
+	if
+#endif
+	pelcod_call_pre_packet_send(val+200);
+}
+
+#else
 void led_onoff_set(u16 val)
 {
 	u8 i;
@@ -861,6 +889,7 @@ GPIO_WriteBit(GPIOC, GPIO_Pin_11, Bit_RESET);
 #endif
 	pelcod_call_pre_packet_send(val+200);
 }
+#endif
 
 void key_io_set(u16 val)
 {
@@ -1258,7 +1287,9 @@ void rt_key_thread_entry(void* parameter)
 	u16 k;
 
 	
-
+	rt_thread_delay(1000);
+	led_onoff_set(1);// default mode is : mode 1
+	
     while(1)
 	{
 		
